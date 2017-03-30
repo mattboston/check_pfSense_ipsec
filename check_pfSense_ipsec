@@ -1,0 +1,91 @@
+#!/bin/sh
+#
+# Written by Matt Shields
+#
+# Usage: ./check_pfSense_ipsec <192.168.1.0/24>
+#
+# Description:
+#
+# This plugin will give you the status of the IPSec tunnels on a pfSense
+# firewall by calling with the subnet that is defined in the Phase 2 IPSec
+# config
+#
+# Output:
+#
+#
+# Notes:
+# On your pfSense firewall, install the NRPEv2 package, then put this file
+# in the /usr/local/libexec/nagios folder with the correct permissions.
+#
+# In pfSense, go to the NRPE GUI.  Create a new check using this file and
+# using $ARG1$ in the argument field.
+#
+# Examples:
+#
+# Check if tunnel is up on 192.168.1.0/24
+#
+#   check_pfSense_ipsec 192.168.1.0/24
+#
+# Check if tunnel is up on 10.10.10.0/24
+#
+#   check_pfSense_ipsec 10.10.10.0/24
+#
+#
+
+# Paths to commands used in this script.  These
+# may have to be modified to match your system setup.
+
+PATH="/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
+export PATH
+PROGNAME=`basename $0`
+PROGPATH=`echo $0 | sed -e 's,[\\/][^\\/][^\\/]*$,,'`
+REVISION=""
+PATH="/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
+
+export PATH
+
+. $PROGPATH/utils.sh
+
+print_usage() {
+    echo "Usage: $PROGNAME <192.168.1.0/24>"
+}
+
+print_help() {
+    print_revision $PROGNAME $REVISION
+    echo ""
+    print_usage
+    echo ""
+    echo "IPSec Tunnel Status plugin for Nagios"
+    echo ""
+    support
+}
+
+# Make sure the correct number of command line
+# arguments have been supplied
+
+if [ $# -lt 1 ]; then
+    print_usage
+    exit $STATE_UNKNOWN
+fi
+
+endpoint=$1
+
+connection=`/usr/local/sbin/ipsec status | grep ${endpoint} | awk -F: '{print $1;exit;}' | sed 's/{.*$//' | tr -d '[:space:]'`
+
+if [ -z "${connection}" ]
+then
+        echo "UNKNOWN - Tunnel ${endpoint} doesn't exist"
+        exitstatus=$STATE_UNKNOWN
+else
+        results2=`/usr/local/sbin/ipsec status ${connection}`
+        if echo $results2 | grep --quiet 'ESTABLISHED'
+        then
+                echo "OK - Tunnel Up - ${connection} ${endpoint}"
+                exitstatus=$STATE_OK
+        else
+                echo "CRITICAL - Tunnel Down - ${connection} ${endpoint}"
+                exitstatus=$STATE_CRITICAL
+        fi
+fi
+
+exit $exitstatus
