@@ -1,6 +1,7 @@
 #!/bin/sh
 #
 # Written by Matt Shields
+# URL: https://github.com/mattboston/check_pfSense_ipsec
 #
 # Usage: ./check_pfSense_ipsec <192.168.1.0/24>
 #
